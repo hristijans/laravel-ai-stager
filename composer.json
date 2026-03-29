@@ -1,0 +1,43 @@
+{
+    "name": "hristijans/laravel-ai-stager",
+    "description": "Zero-cost AI staging driver for the Laravel AI SDK. Intercept all AI calls and return fixture responses in staging environments.",
+    "type": "library",
+    "license": "MIT",
+    "keywords": ["laravel", "ai", "staging", "testing", "mock", "fixture", "laravel-ai"],
+    "require": {
+        "php": "^8.2",
+        "laravel/ai": ">=0.1.0",
+        "illuminate/support": "^11.0|^12.0",
+        "illuminate/console": "^11.0|^12.0",
+        "illuminate/cache": "^11.0|^12.0",
+        "illuminate/log": "^11.0|^12.0",
+        "symfony/http-foundation": "^7.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^9.0|^10.0",
+        "pestphp/pest": "^3.0",
+        "pestphp/pest-plugin-laravel": "^3.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Hristijans\\AiStager\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Hristijans\\AiStager\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": ["Hristijans\\AiStager\\AiStagerServiceProvider"]
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
