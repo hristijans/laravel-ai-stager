@@ -22,7 +22,7 @@ class StagerAudioResponse extends AudioResponse
         return new self(
             audio: self::placeholderBase64(),
             meta: new Meta(provider: 'stager', model: 'stager'),
-            mimeType: 'audio/mpeg',
+            mime: 'audio/mpeg',
         );
     }
 

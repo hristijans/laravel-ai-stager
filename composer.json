@@ -25,7 +25,8 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Hristijans\\AiStager\\Tests\\": "tests/"
+            "Hristijans\\AiStager\\Tests\\": "tests/",
+            "Hristijans\\AiStager\\Tests\\Support\\": "tests/Support/"
         }
     },
     "extra": {

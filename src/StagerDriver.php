@@ -1,8 +1,20 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Hristijans\AiStager;
 
 use BadMethodCallException;
+use Hristijans\AiStager\Fixtures\FixtureResolver;
+use Hristijans\AiStager\Fixtures\HashVector;
+use Hristijans\AiStager\Responses\StagerAgentResponse;
+use Hristijans\AiStager\Responses\StagerAudioResponse;
+use Hristijans\AiStager\Responses\StagerEmbeddingsResponse;
+use Hristijans\AiStager\Responses\StagerImageResponse;
+use Hristijans\AiStager\Responses\StagerRerankingResponse;
+use Hristijans\AiStager\Responses\StagerStreamableAgentResponse;
+use Hristijans\AiStager\Responses\StagerTranscriptionResponse;
+use Illuminate\Support\Facades\Log;
 use Laravel\Ai\Contracts\Files\TranscribableAudio;
 use Laravel\Ai\Contracts\Gateway\AudioGateway;
 use Laravel\Ai\Contracts\Gateway\EmbeddingGateway;
@@ -17,14 +29,11 @@ use Laravel\Ai\Contracts\Providers\RerankingProvider;
 use Laravel\Ai\Contracts\Providers\TextProvider;
 use Laravel\Ai\Contracts\Providers\TranscriptionProvider;
 use Laravel\Ai\Prompts\AgentPrompt;
-use Laravel\Ai\Responses\AgentResponse;
 use Laravel\Ai\Responses\AudioResponse;
-use Laravel\Ai\Responses\Data\Meta;
-use Laravel\Ai\Responses\Data\Usage;
 use Laravel\Ai\Responses\EmbeddingsResponse;
 use Laravel\Ai\Responses\ImageResponse;
 use Laravel\Ai\Responses\RerankingResponse;
-use Laravel\Ai\Responses\StreamableAgentResponse; // return type only — implemented Phase 5
+use Laravel\Ai\Responses\StreamableAgentResponse;
 use Laravel\Ai\Responses\TranscriptionResponse;
 
 /**
@@ -35,31 +44,29 @@ use Laravel\Ai\Responses\TranscriptionResponse;
  * This class implements all provider interfaces so that AiManager's typed
  * provider methods (textProvider, audioProvider, etc.) pass their instanceof
  * checks when returning this driver.
- *
- * Full implementation is added in Phase 5. Gateway methods are intentionally
- * unsupported — the stager never delegates to a real gateway.
  */
 class StagerDriver implements AudioProvider, EmbeddingProvider, ImageProvider, RerankingProvider, TextProvider, TranscriptionProvider
 {
+    public function __construct(
+        private readonly FixtureResolver $fixtures,
+    ) {}
+
     // -------------------------------------------------------------------------
     // TextProvider
     // -------------------------------------------------------------------------
 
-    public function prompt(AgentPrompt $prompt): AgentResponse
+    public function prompt(AgentPrompt $prompt): StagerAgentResponse
     {
-        // Phase 5: resolve fixture via FixtureResolver, simulate latency, log
-        return new AgentResponse(
-            invocationId: 'stager-'.uniqid(),
-            text: config('ai-stager.agents.*.default', 'Simulated AI response for staging.'),
-            usage: new Usage,
-            meta: new Meta(provider: 'stager', model: 'stager'),
-        );
+        $this->intercept('prompt', ['agent' => get_class($prompt->agent)]);
+
+        return StagerAgentResponse::make($this->fixtures->resolve($prompt));
     }
 
     public function stream(AgentPrompt $prompt): StreamableAgentResponse
     {
-        // Phase 5: return StagerStreamableAgentResponse with word-by-word SSE emission
-        throw new \RuntimeException('[AI Stager] stream() not yet implemented — coming in Phase 5.');
+        $this->intercept('stream', ['agent' => get_class($prompt->agent)]);
+
+        return StagerStreamableAgentResponse::make($this->fixtures->resolve($prompt));
     }
 
     public function textGateway(): TextGateway
@@ -98,8 +105,9 @@ class StagerDriver implements AudioProvider, EmbeddingProvider, ImageProvider, R
         ?string $model = null,
         int $timeout = 30,
     ): AudioResponse {
-        // Phase 5: return StagerAudioResponse wrapping placeholder MP3
-        throw new \RuntimeException('[AI Stager] audio() not yet implemented — coming in Phase 5.');
+        $this->intercept('audio');
+
+        return StagerAudioResponse::make();
     }
 
     public function audioGateway(): AudioGateway
@@ -129,8 +137,9 @@ class StagerDriver implements AudioProvider, EmbeddingProvider, ImageProvider, R
         ?string $model = null,
         ?int $timeout = null,
     ): ImageResponse {
-        // Phase 5: return StagerImageResponse wrapping placeholder PNG
-        throw new \RuntimeException('[AI Stager] image() not yet implemented — coming in Phase 5.');
+        $this->intercept('image');
+
+        return StagerImageResponse::make();
     }
 
     public function imageGateway(): ImageGateway
@@ -162,8 +171,16 @@ class StagerDriver implements AudioProvider, EmbeddingProvider, ImageProvider, R
      */
     public function embeddings(array $inputs, ?int $dimensions = null, ?string $model = null, int $timeout = 30): EmbeddingsResponse
     {
-        // Phase 5: return StagerEmbeddingResponse with hash or zero vectors
-        throw new \RuntimeException('[AI Stager] embeddings() not yet implemented — coming in Phase 5.');
+        $this->intercept('embeddings', ['inputs' => count($inputs)]);
+
+        $dimensions = $dimensions ?? $this->defaultEmbeddingsDimensions();
+        $strategy = config('ai-stager.embeddings.strategy', 'hash');
+
+        $vectors = $strategy === 'hash'
+            ? array_map(fn (string $input) => HashVector::generate($input, $dimensions), $inputs)
+            : null;
+
+        return StagerEmbeddingsResponse::make($inputs, $dimensions, $vectors);
     }
 
     public function embeddingGateway(): EmbeddingGateway
@@ -195,8 +212,9 @@ class StagerDriver implements AudioProvider, EmbeddingProvider, ImageProvider, R
      */
     public function rerank(array $documents, string $query, ?int $limit = null, ?string $model = null): RerankingResponse
     {
-        // Phase 5: return StagerRerankResponse with descending fake scores
-        throw new \RuntimeException('[AI Stager] rerank() not yet implemented — coming in Phase 5.');
+        $this->intercept('rerank', ['documents' => count($documents)]);
+
+        return StagerRerankingResponse::make($documents, $limit);
     }
 
     public function rerankingGateway(): RerankingGateway
@@ -224,8 +242,11 @@ class StagerDriver implements AudioProvider, EmbeddingProvider, ImageProvider, R
         bool $diarize = false,
         ?string $model = null,
     ): TranscriptionResponse {
-        // Phase 5: return StagerTranscriptionResponse with configured default text
-        throw new \RuntimeException('[AI Stager] transcribe() not yet implemented — coming in Phase 5.');
+        $this->intercept('transcribe');
+
+        $text = (string) config('ai-stager.transcription.default', 'This is a simulated transcription for the staging environment.');
+
+        return StagerTranscriptionResponse::make($text);
     }
 
     public function transcriptionGateway(): TranscriptionGateway
@@ -241,5 +262,27 @@ class StagerDriver implements AudioProvider, EmbeddingProvider, ImageProvider, R
     public function defaultTranscriptionModel(): string
     {
         return 'stager';
+    }
+
+    // -------------------------------------------------------------------------
+    // Internal
+    // -------------------------------------------------------------------------
+
+    /**
+     * Log the interception and simulate configured latency.
+     *
+     * @param  array<string, mixed>  $context
+     */
+    private function intercept(string $operation, array $context = []): void
+    {
+        if (config('ai-stager.log', false)) {
+            Log::info('[AI Stager] Intercepted '.$operation, $context);
+        }
+
+        $ms = (int) config('ai-stager.latency_ms', 0);
+
+        if ($ms > 0) {
+            usleep($ms * 1000);
+        }
     }
 }
