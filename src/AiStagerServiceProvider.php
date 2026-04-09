@@ -2,6 +2,8 @@
 
 namespace Hristijans\AiStager;
 
+use Hristijans\AiStager\Commands\AuditCommand;
+use Hristijans\AiStager\Commands\MakeFixtureCommand;
 use Hristijans\AiStager\Concerns\NullsProviderKeys;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
@@ -48,7 +50,10 @@ class AiStagerServiceProvider extends ServiceProvider
                 __DIR__.'/../resources/fixtures' => resource_path('ai-fixtures'),
             ], 'ai-stager-fixtures');
 
-            // Phase 6: register Artisan commands (MakeFixtureCommand, AuditCommand)
+            $this->commands([
+                MakeFixtureCommand::class,
+                AuditCommand::class,
+            ]);
         }
 
         if (! config('ai-stager.enabled')) {
