@@ -11,15 +11,14 @@ use Laravel\Ai\Responses\ImageResponse;
 /**
  * ImageResponse for the stager driver.
  *
- * Returns a placeholder PNG image. In Phase 8 the placeholder is replaced by
- * a proper 512×512 PNG asset from resources/fixtures/images/placeholder.png.
- * Until then a minimal 1×1 transparent PNG is embedded as a base64 constant.
+ * Returns a 512×512 gray placeholder PNG from resources/fixtures/images/placeholder.png.
+ * Falls back to a minimal 1×1 transparent PNG when the asset is unavailable.
  */
 class StagerImageResponse extends ImageResponse
 {
     /**
-     * Minimal valid 1×1 transparent PNG encoded as base64.
-     * Replaced by the real placeholder asset once Phase 8 lands.
+     * Minimal valid 1×1 transparent PNG encoded as base64 — used only when
+     * the bundled placeholder asset is not found on disk.
      */
     private const PLACEHOLDER_PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
 

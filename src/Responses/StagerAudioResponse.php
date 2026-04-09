@@ -8,9 +8,7 @@ use Laravel\Ai\Responses\Data\Meta;
 /**
  * AudioResponse for the stager driver.
  *
- * Returns a placeholder MP3. In Phase 8 the placeholder is replaced by a
- * proper silent MP3 asset from resources/fixtures/audio/placeholder.mp3.
- * Until then an empty audio payload is used.
+ * Returns a silent placeholder MP3 from resources/fixtures/audio/placeholder.mp3.
  */
 class StagerAudioResponse extends AudioResponse
 {
@@ -26,18 +24,12 @@ class StagerAudioResponse extends AudioResponse
         );
     }
 
-    /**
-     * Return base64 from the real placeholder file when available, otherwise
-     * return an empty payload.
-     */
     private static function placeholderBase64(): string
     {
         $path = __DIR__.'/../../resources/fixtures/audio/placeholder.mp3';
 
-        if (is_file($path)) {
-            return base64_encode((string) file_get_contents($path));
-        }
-
-        return '';
+        return is_file($path)
+            ? base64_encode((string) file_get_contents($path))
+            : '';
     }
 }
