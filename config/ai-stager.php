@@ -47,6 +47,16 @@ return [
         'enabled'    => env('AI_STAGER_DASHBOARD', true),
         'path'       => env('AI_STAGER_DASHBOARD_PATH', 'stager'),
         'middleware' => ['web', 'auth'],
+
+        /*
+        |----------------------------------------------------------------------
+        | Intercept Log (shown in /stager/logs)
+        |----------------------------------------------------------------------
+        | log_ttl  — seconds to keep entries in the cache before they expire.
+        | log_max  — maximum number of entries retained (oldest are pruned).
+        */
+        'log_ttl' => env('AI_STAGER_LOG_TTL', 3600),
+        'log_max' => env('AI_STAGER_LOG_MAX', 200),
     ],
 
     /*

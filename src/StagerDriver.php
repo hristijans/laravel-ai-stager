@@ -8,6 +8,7 @@ use BadMethodCallException;
 use Hristijans\AiStager\Fixtures\FixtureResolver;
 use Hristijans\AiStager\Fixtures\HashVector;
 use Hristijans\AiStager\Responses\StagerAgentResponse;
+use Hristijans\AiStager\Support\InterceptLogger;
 use Hristijans\AiStager\Responses\StagerAudioResponse;
 use Hristijans\AiStager\Responses\StagerEmbeddingsResponse;
 use Hristijans\AiStager\Responses\StagerImageResponse;
@@ -49,6 +50,7 @@ class StagerDriver implements AudioProvider, EmbeddingProvider, ImageProvider, R
 {
     public function __construct(
         private readonly FixtureResolver $fixtures,
+        private readonly InterceptLogger $logger,
     ) {}
 
     // -------------------------------------------------------------------------
@@ -277,6 +279,7 @@ class StagerDriver implements AudioProvider, EmbeddingProvider, ImageProvider, R
     {
         if (config('ai-stager.log', false)) {
             Log::info('[AI Stager] Intercepted '.$operation, $context);
+            $this->logger->record($operation, $context);
         }
 
         $ms = (int) config('ai-stager.latency_ms', 0);

@@ -5,9 +5,13 @@ namespace Hristijans\AiStager;
 use Hristijans\AiStager\Commands\AuditCommand;
 use Hristijans\AiStager\Commands\MakeFixtureCommand;
 use Hristijans\AiStager\Concerns\NullsProviderKeys;
+use Hristijans\AiStager\Livewire\AgentList;
+use Hristijans\AiStager\Livewire\FixtureEditor;
+use Hristijans\AiStager\Livewire\InterceptLog;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Ai\AiManager;
+use Livewire\Livewire;
 
 class AiStagerServiceProvider extends ServiceProvider
 {
@@ -23,7 +27,7 @@ class AiStagerServiceProvider extends ServiceProvider
         }
 
         // Register the StagerDriver as a singleton so every interception
-        // returns the same instance (important for Phase 5 state tracking).
+        // returns the same instance (important for state tracking).
         $this->app->singleton(StagerDriver::class);
 
         // Decorate the AiManager binding so that ALL provider resolution —
@@ -41,6 +45,8 @@ class AiStagerServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        $this->loadViewsFrom(__DIR__.'/../resources/views', 'ai-stager');
+
         if ($this->app->runningInConsole()) {
             $this->publishes([
                 __DIR__.'/../config/ai-stager.php' => config_path('ai-stager.php'),
@@ -49,6 +55,10 @@ class AiStagerServiceProvider extends ServiceProvider
             $this->publishes([
                 __DIR__.'/../resources/fixtures' => resource_path('ai-fixtures'),
             ], 'ai-stager-fixtures');
+
+            $this->publishes([
+                __DIR__.'/../resources/views' => resource_path('views/vendor/ai-stager'),
+            ], 'ai-stager-views');
 
             $this->commands([
                 MakeFixtureCommand::class,
@@ -60,7 +70,14 @@ class AiStagerServiceProvider extends ServiceProvider
             return;
         }
 
-        // Phase 7: load dashboard routes
+        // Load dashboard routes and register Livewire components when enabled.
+        if (config('ai-stager.dashboard.enabled', true)) {
+            $this->loadRoutesFrom(__DIR__.'/../routes/stager.php');
+
+            Livewire::component('ai-stager-agent-list', AgentList::class);
+            Livewire::component('ai-stager-fixture-editor', FixtureEditor::class);
+            Livewire::component('ai-stager-intercept-log', InterceptLog::class);
+        }
 
         // Null all real provider API keys — safety net in case any AI call
         // somehow escapes the StagerAiManager decorator.

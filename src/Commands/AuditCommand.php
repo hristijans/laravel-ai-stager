@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Hristijans\AiStager\Commands;
 
+use Hristijans\AiStager\Support\AgentDiscovery;
 use Illuminate\Console\Command;
 use Laravel\Ai\Contracts\Agent;
-use SplFileInfo;
 
 class AuditCommand extends Command
 {
@@ -18,7 +18,7 @@ class AuditCommand extends Command
     public function handle(): int
     {
         $dir = $this->resolveDir();
-        $agents = $this->discoverAgents($dir);
+        $agents = AgentDiscovery::inDirectory($dir);
 
         if (empty($agents)) {
             $this->components->warn('No classes implementing '.Agent::class." were found in [{$dir}].");
@@ -62,65 +62,6 @@ class AuditCommand extends Command
         $option = (string) $this->option('dir');
 
         return str_starts_with($option, DIRECTORY_SEPARATOR) ? $option : base_path($option);
-    }
-
-    /**
-     * Discover all classes in the scan directory that implement Agent.
-     *
-     * @return string[]
-     */
-    private function discoverAgents(string $dir): array
-    {
-        if (! is_dir($dir)) {
-            return [];
-        }
-
-        $agents = [];
-
-        /** @var SplFileInfo[] $files */
-        $files = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS),
-        );
-
-        foreach ($files as $file) {
-            if ($file->getExtension() !== 'php') {
-                continue;
-            }
-
-            $fqn = $this->extractClassName((string) $file->getRealPath());
-
-            if ($fqn === null || ! class_exists($fqn)) {
-                continue;
-            }
-
-            if (is_a($fqn, Agent::class, allow_string: true)) {
-                $agents[] = $fqn;
-            }
-        }
-
-        sort($agents);
-
-        return $agents;
-    }
-
-    /**
-     * Parse the fully-qualified class name from a PHP file using regex.
-     */
-    private function extractClassName(string $filePath): ?string
-    {
-        $contents = (string) file_get_contents($filePath);
-
-        preg_match('/^namespace\s+([^;{]+)[;{]/m', $contents, $nsMatch);
-        $namespace = isset($nsMatch[1]) ? trim($nsMatch[1]) : '';
-
-        preg_match('/^(?:abstract\s+|final\s+)?class\s+(\w+)/m', $contents, $classMatch);
-        $className = $classMatch[1] ?? '';
-
-        if ($className === '') {
-            return null;
-        }
-
-        return $namespace !== '' ? $namespace.'\\'.$className : $className;
     }
 
     /**
